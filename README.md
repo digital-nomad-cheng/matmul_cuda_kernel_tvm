@@ -34,19 +34,6 @@ class MyMatMulModule:
         C[vi, vj] = C[vi, vj] + A[vi, vk] * B[vk, vj]
 ```
 
-## Search efficient code using auto schedule
-Using TVM auto schedule, we can only provide the API the target we want to run our program on. I use Google's colab, which has a nvidia-tesla-t4 for GPU runtime at the time of writing. The following code will search the optimal code on this GPU, utilizing information like register and shared memoery size. 
-```Python
-database = ms.tune_tir(
-    mod=MyMatMulModule,
-    target="nvidia/nvidia-t4", # define target type
-    work_dir="./tune_tmp",
-    max_trials_global=64,
-    num_trials_per_iter=64,
-    task_name="main"
-)
-sch_tuned = ms.tir_integration.compile_tir(database, MyMatMulModule, "nvidia/nvidia-t4")
-```
 
 We can check the TVM script computation abstraction after schedule using the following code:
 
@@ -54,7 +41,7 @@ We can check the TVM script computation abstraction after schedule using the fol
 sch_tuned.mod.show()
 ```
 
-We can try to evaluate the GLOPS using the following code:
+We can try to evaluate the GFLOPS using the following code:
 
 ```Python
 from tvm.script.parser.tir import evaluate
@@ -69,6 +56,27 @@ C_nd = tvm.nd.array(np.zeros((M, N), dtype="float32"), dev)
 evaluator = rt_mod.time_evaluator("main", dev, number=10)
 print("MetaSchedule: %f GFLOPS" % (num_flop / evaluator(A_nd, B_nd, C_nd).mean / 1e9))
 ```
+
+## Optimizing code by manually schedule
+As I have said before, TVM decouples computation abstraction from schedule/implemenation. We can see TVM script as computation abstraction, and can try different schedule using the TVM API. In the jupyter notebook, I tried to schedule the matmul computation using shared memory and blocking which are two common techniques in high performance gemm optimization. Though it tooks a lot of time the maximum GFLOPS achieved manually is 1336 GFLOPS.
+
+## Search efficient code using auto schedule
+Using TVM auto schedule, we can only provide the API the target we want to run our program on. I use Google's colab, which has a nvidia-tesla-t4 for GPU runtime at the time of writing. The following code will search the optimal code on this GPU, utilizing information like register and shared memoery size. 
+```Python
+database = ms.tune_tir(
+    mod=MyMatMulModule,
+    target="nvidia/nvidia-t4", # define target type
+    work_dir="./tune_tmp",
+    max_trials_global=64,
+    num_trials_per_iter=64,
+    task_name="main"
+)
+sch_tuned = ms.tir_integration.compile_tir(database, MyMatMulModule, "nvidia/nvidia-t4")
+```
+
+The maximum GFLOPS achieved using auto schedule is 3107 GFLOPS. This is more than two times higher than the performance achieved manually. 
+So I think next time when you want to write some cuda code, you might want try to use TVM and processor to do the heavy load.
+
 
 ## Export generated cuda kernel
 
