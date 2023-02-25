@@ -58,7 +58,7 @@ print("MetaSchedule: %f GFLOPS" % (num_flop / evaluator(A_nd, B_nd, C_nd).mean /
 ```
 
 ## Optimizing code by manually schedule
-As I have said before, TVM decouples computation abstraction from schedule/implemenation. We can see TVM script as computation abstraction, and can try different schedule using the TVM API. In the jupyter notebook, I tried to schedule the matmul computation using shared memory and blocking which are two common techniques in high performance gemm optimization. Though it tooks a lot of time the maximum GFLOPS achieved manually is 1336 GFLOPS.
+As I have said before, TVM decouples computation abstraction from schedule/implemenation. We can see TVM script as computation abstraction, and can try different schedule using the TVM API. In the jupyter notebook, I tried to schedule the matmul computation using shared memory and blocking which are two common techniques in high performance gemm optimization. Though it tooks a lot of time the maximum GFLOPS achieved manually is 1336 GFLOPS. 
 
 ## Search efficient code using auto schedule
 Using TVM auto schedule, we can only provide the API the target we want to run our program on. I use Google's colab, which has a nvidia-tesla-t4 for GPU runtime at the time of writing. The following code will search the optimal code on this GPU, utilizing information like register and shared memoery size. 
@@ -77,6 +77,7 @@ sch_tuned = ms.tir_integration.compile_tir(database, MyMatMulModule, "nvidia/nvi
 The maximum GFLOPS achieved using auto schedule is 3107 GFLOPS. This is more than two times higher than the performance achieved manually. 
 So I think next time when you want to write some cuda code, you might want try to use TVM and processor to do the heavy load.
 
+The Peak Performance(FLOPS) of nvidia-telsa-t4 is 8.1 TFLOPS which is 8100 GLOPS, so our auto scheduled gemm kernel achieved almost 38% of theoretical max throughput which is not bad given how little effots it requires using TVM. 
 
 ## Export generated cuda kernel
 
